@@ -1,10 +1,14 @@
 all: client server
 
 client: inf151825_151823_k.c
-	cc -Wall inf151825_151823_k.c -o inf151825_151823_k
+	cc -Wall inf151825_151823_k.c -o client
 
 server: inf151825_151823_s.c
-	cc -Wall inf151825_151823_s.c -o inf151825_151823_s
+	cc -Wall inf151825_151823_s.c -o server
 
 clean:
-	rm -f inf151825_151823_k inf151825_151823_s
+	rm -f client server
+
+run: client server
+	./client
+	./server
