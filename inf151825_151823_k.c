@@ -3,6 +3,7 @@
 int main(int argc, char const *argv[])
 {
     printf("client active...\n");
+    int my_pid = getpid();
 
     // read server id from shared.txt
     int file_id;
@@ -18,22 +19,25 @@ int main(int argc, char const *argv[])
 
     // login loop
     while (1) {
-        MSGBUF loginMsg;
-        loginMsg.mtype = 1;
+        LBUF login_msg;
+        login_msg.mtype = 1;
+        login_msg.pid = getpid();
         
         printf("Login: ");
-        char myLogin[SHORT_MSG_LEN];
-        scanf("%16s", myLogin);
-        strcpy(loginMsg.shortMsg, myLogin);
+        char my_login[SHORT_MSG_LEN];
+        scanf("%16s", my_login);
+        strcpy(login_msg.nick, my_login);
 
         printf("Password: ");
-        char myPassword[LONG_MSG_LEN];
-        scanf("%16s", myPassword);
-        strcpy(loginMsg.longMsg, myPassword);
+        char my_password[LONG_MSG_LEN];
+        scanf("%16s", my_password);
+        strcpy(login_msg.pswd, my_password);
 
-        msgsnd(server_id, &loginMsg, MSG_SIZE, 0);
+        msgsnd(server_id, &login_msg, LMSG_SIZE, 0);
         printf("sent\n");
 
+        msgrcv(server_id, &login_msg, LMSG_SIZE, my_pid, 0);
+        
         // try to connect to server
         // send login msg to server w/ pswd
         // if credentials are correct, exit loop w/ correct ipc adr

@@ -1,6 +1,13 @@
 #include "inf151825_151823.h"
 
-int log_user(MSGBUF client_msg) {
+// global values are OK here bc this file doesn't connect to any other one
+int user_pids[MAX_USERS];
+char* user_nicks[MAX_USERS];
+int bad_pids[MAX_BAD_PIDS];
+
+int options_switch() {}
+
+int log_user(LBUF client_msg) {
     int config_fd = open("config.txt", O_RDONLY);
     while (1) {
         char buf;
@@ -26,8 +33,12 @@ int log_user(MSGBUF client_msg) {
         }
         
         // check if nick is like user nick, if so then check the pswd
-        if (strcmp(nick_pswd[0], client_msg.shortMsg) != 0) continue;
-        if (strcmp(nick_pswd[1], client_msg.longMsg) != 0) return -1;   // Wrong pswd
+        if (strcmp(nick_pswd[0], client_msg.nick) != 0) continue;     
+        if (strcmp(nick_pswd[1], client_msg.pswd) != 0) {
+            // Wrong pswd
+            // table for PIDs w/ bad pswd
+            return -1;
+        }   
         else return 1;  // Logged in
     }
     // return -2; // User not found
@@ -46,25 +57,35 @@ int main(int argc, char const *argv[]) {
     close(file_id);
     
 
-    MSGBUF client_msg;
+    LBUF client_msg;
+    MSGBUF msg_to_client;
     while (1) {
         // printf("...\n");
-        msgrcv(server_id, &client_msg, MSG_SIZE, 0, 0);
+        msgrcv(server_id, &client_msg, LMSG_SIZE, 1, 0); // 1 - only reads login msgs
+        int feedback = log_user(client_msg);
+        msg_to_client.mtype = client_msg.pid;
+        msg_to_client.msgCode = feedback; // 1 - OK, -1 - BAD PSWD, -2 - BAD USER -3 - BLOCKED USER
+        printf("feedback: %d\n", feedback);
         // printf("rcvd...\n");
-        switch (client_msg.mtype) {
-            case 1: // login
-                // printf("feedback...\n");
-                int feedback = log_user(client_msg);
-                // TODO case feedback
-                printf("feedback: %d\n", feedback);
-                break;
-            case 2: // logout
 
-                break;
-            default:
-                printf("default\n");
-                continue;
+        for (int iUsers = 0; iUsers < MAX_USERS; iUsers++) {
+            // serving all user IPC FIFOs
+            msgrcv(server_id, &client_msg, LMSG_SIZE, 1, 0); // change 1 to user_id
         }
+        
+        // switch should be moved to a safe function like options_switch()
+        // switch (client_msg.mtype) {
+        //     case 1: // login
+        //         // printf("feedback...\n");
+
+        //         break;
+        //     case 2: // logout
+
+        //         break;
+        //     default:
+        //         printf("default\n");
+        //         continue;
+        // }
     }   
         // read msgs from main ipc fifo (create users, log users in)
         // write to main
