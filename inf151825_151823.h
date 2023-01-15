@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -16,10 +17,14 @@
 #define MAX_READ_MSGS 10
 #define SHORT_MSG_LEN 16
 #define LONG_MSG_LEN 300
+
 #define MSG_SIZE SHORT_MSG_LEN+LONG_MSG_LEN+1
 #define LMSG_SIZE SHORT_MSG_LEN*2 + sizeof(int)
+#define LCMSG_SIZE sizeof(int)+1
+
 #define MAX_USERS 15
 #define MAX_BAD_PIDS 100
+#define MAX_GROUPS 5
 
 struct msgbuf {
     long mtype;
@@ -35,7 +40,14 @@ struct loginbuf {
     char pswd[SHORT_MSG_LEN];
 };
 
+struct loginconfbuf {
+    long mtype;
+    char msgCode;
+    int ipcID;
+};
+
 typedef struct msgbuf MSGBUF;
 typedef struct loginbuf LBUF;
+typedef struct loginconfbuf LCBUF;
 
 #endif

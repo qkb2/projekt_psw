@@ -18,8 +18,12 @@ int main(int argc, char const *argv[])
     // MSGBUF server_msg;
 
     // login loop
+    LBUF login_msg;
+    LCBUF login_rcvd;
+    MSGBUF msg_to_server;
+    MSGBUF msg_from_server;
+
     while (1) {
-        LBUF login_msg;
         login_msg.mtype = 1;
         login_msg.pid = getpid();
         
@@ -29,14 +33,14 @@ int main(int argc, char const *argv[])
         strcpy(login_msg.nick, my_login);
 
         printf("Password: ");
-        char my_password[LONG_MSG_LEN];
+        char my_password[SHORT_MSG_LEN];
         scanf("%16s", my_password);
         strcpy(login_msg.pswd, my_password);
 
         msgsnd(server_id, &login_msg, LMSG_SIZE, 0);
         printf("sent\n");
 
-        msgrcv(server_id, &login_msg, LMSG_SIZE, my_pid, 0);
+        msgrcv(server_id, &login_rcvd, LCMSG_SIZE, my_pid, 0);
         
         // try to connect to server
         // send login msg to server w/ pswd

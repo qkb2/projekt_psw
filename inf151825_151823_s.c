@@ -3,7 +3,12 @@
 // global values are OK here bc this file doesn't connect to any other one
 int user_pids[MAX_USERS];
 char* user_nicks[MAX_USERS];
+
 int bad_pids[MAX_BAD_PIDS];
+int bad_pid_strikes[MAX_BAD_PIDS];
+
+int groups[MAX_GROUPS];
+int group_user_matrix[MAX_GROUPS][MAX_USERS];
 
 int options_switch() {}
 
@@ -57,20 +62,24 @@ int main(int argc, char const *argv[]) {
     close(file_id);
     
 
-    LBUF client_msg;
+    LBUF login_msg;
+    LCBUF login_to_send;
     MSGBUF msg_to_client;
+    MSGBUF msg_from_client;
+
     while (1) {
         // printf("...\n");
-        msgrcv(server_id, &client_msg, LMSG_SIZE, 1, 0); // 1 - only reads login msgs
-        int feedback = log_user(client_msg);
-        msg_to_client.mtype = client_msg.pid;
-        msg_to_client.msgCode = feedback; // 1 - OK, -1 - BAD PSWD, -2 - BAD USER -3 - BLOCKED USER
+        msgrcv(server_id, &login_msg, LMSG_SIZE, 1, IPC_NOWAIT); // 1 - only reads login msgs
+        int feedback = log_user(login_msg);
+        login_to_send.mtype = login_msg.pid;
+        login_to_send.msgCode = feedback; // 1 - OK, -1 - BAD PSWD, -2 - BAD USER -3 - BLOCKED USER
+        msgsnd(server_id, &login_to_send, LCMSG_SIZE, 0);
         printf("feedback: %d\n", feedback);
         // printf("rcvd...\n");
 
         for (int iUsers = 0; iUsers < MAX_USERS; iUsers++) {
             // serving all user IPC FIFOs
-            msgrcv(server_id, &client_msg, LMSG_SIZE, 1, 0); // change 1 to user_id
+            msgrcv(server_id, &msg_from_client, MSG_SIZE, 1, IPC_NOWAIT); // change 1 to user_id
         }
         
         // switch should be moved to a safe function like options_switch()
