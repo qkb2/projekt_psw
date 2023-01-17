@@ -14,6 +14,9 @@ int groups[MAX_GROUPS];
 char* group_names[MAX_GROUPS];
 int group_user_matrix[MAX_GROUPS][MAX_USERS];
 
+int user_blocks_user[MAX_USERS][MAX_USERS];
+int user_blocks_group[MAX_USERS][MAX_GROUPS];
+
 int server_id;
 
 void signal_handler(int signo) {
@@ -23,16 +26,110 @@ void signal_handler(int signo) {
     raise(SIGINT);
 }
 
-int options_switch(int my_key) { 
-    // switch (expression)
-    // {
-    // case /* constant-expression */:
-    //     /* code */
-    //     break;
-    
-    // default:
-    //     break;
-    // }
+int get_user_id() {
+    return 0;
+}
+
+int get_group_id() {
+    return 0;
+}
+
+int list_active_users(char* list) {
+    return 0;
+}
+
+int list_groups(char* list) {
+    return 0;
+}
+
+int list_group_users(char* list, char* group) {
+    return 0;
+}
+
+int atJoin_group(int opt, int my_id, char* group) {
+    return 0;
+}
+
+int atMute_user(int opt, int my_id, char* user) {
+    return 0;
+}
+
+int atMute_group(int opt, int my_id, char* group) {
+    return 0;
+}
+
+int logout_user(int my_id) {
+    return 0;
+}
+
+int long_msg_sender(int my_key, MBUF msg) {
+    if (msg.code == 2) {
+        
+    }
+    else if (msg.code == 3) {
+
+    }
+
+    return -1;
+}
+
+int options_switch(int my_key, SMBUF msg, int my_id) {
+    // list msgs need MBUF
+    if (msg.mtype < 5) {
+        MBUF lmsg;
+        switch (msg.mtype) {
+            case 2:
+                // list all users
+                list_active_users(lmsg.longMsg);
+                break;
+                case 3:
+                    // list all groups
+                    list_groups(lmsg.longMsg);
+                    break;
+                case 4:
+                    // list users by group X
+                    list_group_users(lmsg.longMsg, msg.name);
+                    break;
+                default:
+                    return -1;
+        }
+    }
+
+    switch (msg.mtype) {
+    case 5:
+        // join group X
+        atJoin_group(1, my_id, msg.name);
+        break;
+    case 6:
+        // leave group X
+        atJoin_group(0, my_id, msg.name);
+        break;
+
+    // mute NAME:
+    // if opt==2 then the user is muted (not default, default is 0 - not muted)
+    case 7:
+        // mute user X
+        atMute_user(2, my_id, msg.name);
+        break;
+    case 8:
+        // mute group X
+        atMute_group(2, my_id, msg.name);
+        break;
+    case 9:
+        // unmute user X
+        atMute_user(0, my_id, msg.name);
+        break;
+    case 10:
+        // unmute group X
+        atMute_group(0, my_id, msg.name);
+        break;
+    case 11:
+        // logout
+        logout_user(my_id);
+        break;
+    default:
+        return -1;
+    }
 
     return 0;
 }
@@ -100,43 +197,44 @@ int main(int argc, char const *argv[]) {
     printf("server running...\n");
 
     int usersLoaded = load_users(); 
+    printf("Users loaded (%d):\n", usersLoaded);
     int last_bad_pid = 0;   
     for(int i = 0; i < usersLoaded; i++) {
         printf("Login: %s\tPswd: %s\n", user_nicks[i], user_pswds[i]);
     }
 
     // create ipc fifo for users to log into (connect to server)
-    server_id = msgget(2000, 0666 | IPC_CREAT);
+    server_id = msgget(PROGRAM_KEY, 0666 | IPC_CREAT);
     // printf("server id = %d\n", server_id);
 
     // write server id to shared.txt for clients to read from
-    int file_id = creat("shared.txt", 0666);
-    write(file_id, &server_id, sizeof(server_id));
-    close(file_id);
+    // int file_id = creat("shared.txt", 0666);
+    // write(file_id, &server_id, sizeof(server_id));
+    // close(file_id);
     
 
-    LBUF login_msg;
+    LBUF login_rcvd;
     LCBUF login_to_send;
-    MBUF msg_to_client;
-    MBUF msg_from_client;
+    SMBUF short_msg;
+    MBUF long_msg;
 
     printf("Setup succesful... server ID:%d\n", server_id);
 
     while (1) {
         printf("...\n");
-        int test = msgrcv(server_id, &login_msg, LMSG_SIZE, 1, IPC_NOWAIT); // 1 - only reads login msgs
+        int test = msgrcv(server_id, &login_rcvd, LMSG_SIZE, 1, IPC_NOWAIT); // 1 - only reads login msgs
         sleep(1);
         if (test > 0) {
             printf("someone's logging in\n");
             int user_id = 0;
-            int feedback = log_user(login_msg, usersLoaded, &last_bad_pid, &user_id);
-            login_to_send.mtype = login_msg.pid;
+            int feedback = log_user(login_rcvd, usersLoaded, &last_bad_pid, &user_id);
+            login_to_send.mtype = login_rcvd.pid;
             login_to_send.msgCode = feedback; // 1 - OK, -1 - BAD PSWD, -2 - BAD USER -3 - BLOCKED USER
             printf("feedback = %d", feedback);
             if (feedback == 1) {
-                int client_ipc_id = msgget(2000+login_msg.pid, 0666 | IPC_CREAT);
+                int client_ipc_id = msgget(2000+login_rcvd.pid, 0666 | IPC_CREAT);
                 user_ipcs[user_id] = client_ipc_id;
-                user_pids[user_id] = login_msg.pid;
+                user_pids[user_id] = login_rcvd.pid;
                 login_to_send.ipcID = client_ipc_id;
             
             }
@@ -149,24 +247,17 @@ int main(int argc, char const *argv[]) {
             if (user_pids[iUsers] == 0) continue;
             printf("now serving %d\n", user_pids[iUsers]);
             // serving all user IPC FIFOs
-            msgrcv(user_ipcs[iUsers], &msg_from_client, MSG_SIZE, -11, IPC_NOWAIT); // -11 is 1 to 11
-            options_switch(user_ipcs[iUsers]);
+            int ibSMSG = msgrcv(user_ipcs[iUsers], &short_msg, SMSG_SIZE, -11, IPC_NOWAIT);
+            // -11 is 1 to 11
+            if (ibSMSG > 0) options_switch(user_ipcs[iUsers], short_msg, iUsers);
+
+            // code 12 (send msg to user/group) gets its own options bc of its size
+            int ibMSG = msgrcv(user_ipcs[iUsers], &long_msg, MSG_SIZE, 12, IPC_NOWAIT);
+            if (ibMSG > 0) long_msg_sender(user_ipcs[iUsers], long_msg);
+
             // msgsnd(user_ipcs[iUsers], &msg_to_client, MSG_SIZE, IPC_NOWAIT);
         }
-        
-        // switch should be moved to a safe function like options_switch()
-        // switch (client_msg.mtype) {
-        //     case 1: // login
-        //         // printf("feedback...\n");
-
-        //         break;
-        //     case 2: // logout
-
-        //         break;
-        //     default:
-        //         printf("default\n");
-        //         continue;
-        // }
+        // switch case in function_switch()
     }   
         // read msgs from main ipc fifo (create users, log users in)
         // write to main
@@ -175,10 +266,7 @@ int main(int argc, char const *argv[]) {
 
     
     
-    // TODO make server close itself automatically w/ std kill signals (9, 15)
-    // and also unlink that shared.txt while killing itself
-    // also inform clients that server is down
-
-    unlink("shared.txt");
+    // DONE make server close itself automatically w/ std kill signals (9, 15)
+    // also inform clients that server is down (idk if it's necessary)
     return 0;
 }

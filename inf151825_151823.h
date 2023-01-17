@@ -16,6 +16,8 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 
+#define PROGRAM_KEY 0x500
+
 #define MAX_READ_MSGS 10
 #define SHORT_MSG_LEN 16
 #define LONG_MSG_LEN 300

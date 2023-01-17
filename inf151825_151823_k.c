@@ -54,8 +54,9 @@ int is_logged(int my_key) {
                 continue;
             }
             msgsnd(my_key, &smsg, SMSG_SIZE, 0);
-            printf("msg received...\n");
+            printf("waiting for msg...\n");
             msgrcv(my_key, &msg, MSG_SIZE, 100, 0);
+            printf("msg received...\n");
             if (msg.code == -1) {
                 printf("No such name exists.\n");
                 continue;
@@ -115,13 +116,38 @@ int is_logged(int my_key) {
                 continue;
             }
         }
+
+        else if (strcmp(request, "unmute") == 0) {
+            printf(
+                "Do you want to unmute an user [u] or a group [g]? Example: [u username]\n");
+            char opt = 0;
+            scanf(" %c %s", &opt, smsg.name);
+            if (opt == 'u') smsg.mtype = 9;
+            else if (opt == 'g') smsg.mtype = 10;
+            else {
+                printf("Command not found\n");
+                continue;
+            }
+
+            msgsnd(my_key, &smsg, SMSG_SIZE, 0);
+            msgrcv(my_key, &smsg, MSG_SIZE, 101, 0);
+            if (smsg.code == -1) {
+                printf("No such name exists.\n");
+                continue;
+            }
+            if (smsg.code == 1) {
+                printf("Operation successful\n");
+                continue;
+            }
+        }
         else if (strcmp(request, "send") == 0) {
             printf(
                 "Do you want to send a msg to an user [u] or a group [g]? Example: [u username]\n");
             char opt = 0;
-            scanf(" %c %s", &opt, smsg.name);
-            if (opt == 'u') msg.mtype = 9;
-            else if (opt == 'g') msg.mtype = 10;
+            msg.mtype = 12;
+            scanf(" %c %s", &opt, msg.shortMsg);
+            if (opt == 'u') msg.code = 2;
+            else if (opt == 'g') msg.code = 3;
             else {
                 printf("Command not found\n");
                 continue;
@@ -156,15 +182,15 @@ int main(int argc, char const *argv[])
     int my_pid = getpid();
 
     // read server id from shared.txt
-    int file_id;
-    while (1) {
-        file_id = open("shared.txt", O_RDONLY);
-        if (file_id > -1) break;
-    }
-    int server_id;
-    read(file_id, &server_id, sizeof(server_id));
+    // int file_id;
+    // while (1) {
+    //     file_id = open("shared.txt", O_RDONLY);
+    //     if (file_id > -1) break;
+    // }
+    int server_id = msgget(PROGRAM_KEY, 0666 | IPC_CREAT);
+    // read(file_id, &server_id, sizeof(server_id));
     printf("server id: %d\n", server_id);
-    close(file_id);
+    // close(file_id);
     // MSGBUF server_msg;
 
     // login loop
