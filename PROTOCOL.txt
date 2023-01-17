@@ -1,2 +1,27 @@
-1 : login msg
-2 : logout msg
+Only on public server ipc:
+1 (LBUF) - LOGIN
+PROGRAM_PID (LCBUF) - RE:LOGIN
+
+On user's private ipc:
+Read by server (2-12):
+(2-11 TYPE SBUF)
+2 - list active users
+3 - list groups
+4 - list group users
+5 - join group
+6 - leave group
+7 - mute user
+8 - mute group
+9 - unmute user
+10 - unmute group
+11 - logout user
+12 (TYPE BUF) - send msg to:
+SUBTYPE code=2: user
+SUBTYPE code=3: group
+
+Read by user:
+99 - txt msg
+SUBTYPE code=2: user
+SUBTYPE code=3: group
+100 - SMSG ans (for 5-10)
+101 - MSG ans (for 2-4)
