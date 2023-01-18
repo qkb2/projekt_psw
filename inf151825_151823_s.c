@@ -26,45 +26,103 @@ void signal_handler(int signo) {
     raise(SIGINT);
 }
 
-int get_user_id() {
-    return 0;
+int get_user_ipc(char* name) {
+    int ipc = 0;
+    for (int i = 0; i < MAX_USERS; i++) {
+        if (strcmp(name, user_nicks[i]) == 0) {
+            ipc = user_ipcs[i];
+            return ipc;
+        }
+    }
+    return -1; // NOT FOUND
 }
 
-int get_group_id() {
-    return 0;
+int get_user_id(char* name) {
+    for (int i = 0; i < MAX_USERS; i++) {
+        if (strcmp(name, user_nicks[i]) == 0) {
+            return i;
+        }
+    }
+    return -1; // NOT FOUND
 }
 
-int list_active_users(char* list) {
-    return 0;
+int get_group_id(char* name) {
+    for (int i = 0; i < MAX_USERS; i++) {
+        if (strcmp(name, group_names[i]) == 0) 
+            return i;
+    }
+    return -1; // NOT FOUND
+}
+
+void list_active_users(char* list) {
+    for (int i = 0; i < MAX_USERS; i++) {
+        if (user_pids[i] > 0) {
+            strcat(list, user_nicks[i]);
+            strcat(list, "\n");
+        }
+    }
 }
 
 int list_groups(char* list) {
+    for (int i = 0; i < MAX_GROUPS; i++) {
+            strcat(list, group_names[i]);
+            strcat(list, "\n");
+    }
     return 0;
 }
 
 int list_group_users(char* list, char* group) {
+    int group_id = get_group_id(group);
+    if (group_id == -1) return -1;
+    for (int i = 0; i < MAX_USERS; i++) {
+        if (group_user_matrix[group_id][i] == 1) {
+            strcat(list, user_nicks[i]);
+            strcat(list, "\n");
+        }
+    } 
     return 0;
 }
 
 int atJoin_group(int opt, int my_id, char* group) {
+    int group_id = get_group_id(group);
+    if (group_id == -1) return -1;
+    group_user_matrix[group_id][my_id] = opt;
     return 0;
 }
 
 int atMute_user(int opt, int my_id, char* user) {
+    int user_id = get_user_id(user);
+    if (user_id == -1) return -1;
+    user_blocks_user[my_id][user_id] = opt;
     return 0;
 }
 
 int atMute_group(int opt, int my_id, char* group) {
+    int group_id = get_group_id(group);
+    if (group_id == -1) return -1;
+    user_blocks_group[group_id][my_id] = opt;
     return 0;
 }
 
 int logout_user(int my_id) {
+    user_ipcs[my_id] = 0;
+    user_pids[my_id] = 0;
     return 0;
 }
 
-int long_msg_sender(int my_key, MBUF msg) {
+int long_msg_sender(int my_key, MBUF msg, int my_id) {
     if (msg.code == 2) {
-        
+        int user_id = get_user_id(msg.shortMsg);
+        int user_ipc = get_user_ipc(msg.shortMsg);
+        if (user_ipc > 0) {
+            if (user_blocks_user[user_id][my_id] == 2) {
+                // user blocked
+                // send msg back
+            } else {
+                // send msg to user
+                // send msg back
+            }
+        }
     }
     else if (msg.code == 3) {
 
@@ -77,6 +135,8 @@ int options_switch(int my_key, SMBUF msg, int my_id) {
     // list msgs need MBUF
     if (msg.mtype < 5) {
         MBUF lmsg;
+        lmsg.mtype = 100;
+        int err = 0;
         switch (msg.mtype) {
             case 2:
                 // list all users
@@ -88,11 +148,14 @@ int options_switch(int my_key, SMBUF msg, int my_id) {
                     break;
                 case 4:
                     // list users by group X
-                    list_group_users(lmsg.longMsg, msg.name);
+                    err = list_group_users(lmsg.longMsg, msg.name);
                     break;
                 default:
                     return -1;
         }
+        if (err == -1) lmsg.code = -1;
+        else lmsg.code = 1;
+        msgsnd(my_key, &lmsg, MSG_SIZE, IPC_NOWAIT);
     }
 
     switch (msg.mtype) {
@@ -192,6 +255,28 @@ int load_users() {
     }
 }
 
+int load_groups() {
+    int config_fd = open("group_config.txt", O_RDONLY);
+    int iGroup = 0;
+    while (1) {
+        char buf;
+        char name[MSG_SIZE] = "";
+        int n;
+        while((n = read(config_fd, &buf, 1)) > 0) {
+            if (buf == ';') {
+                lseek(config_fd, 1, SEEK_CUR);
+                break;
+            }
+            strncat(name, &buf, 1);
+        }
+        if (n <= 0) return iGroup;  // End of config file
+
+        group_names[iGroup] = malloc(strlen(name)+1);
+        strcpy(user_nicks[iGroup], name);
+        iGroup += 1;
+    }    
+}
+
 int main(int argc, char const *argv[]) {
     signal(SIGINT, signal_handler);
     printf("server running...\n");
@@ -253,7 +338,7 @@ int main(int argc, char const *argv[]) {
 
             // code 12 (send msg to user/group) gets its own options bc of its size
             int ibMSG = msgrcv(user_ipcs[iUsers], &long_msg, MSG_SIZE, 12, IPC_NOWAIT);
-            if (ibMSG > 0) long_msg_sender(user_ipcs[iUsers], long_msg);
+            if (ibMSG > 0) long_msg_sender(user_ipcs[iUsers], long_msg, iUsers);
 
             // msgsnd(user_ipcs[iUsers], &msg_to_client, MSG_SIZE, IPC_NOWAIT);
         }

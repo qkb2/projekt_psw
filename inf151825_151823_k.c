@@ -153,8 +153,8 @@ int is_logged(int my_key) {
                 continue;
             }
 
-            msgsnd(my_key, &msg, SMSG_SIZE, 0);
-            msgrcv(my_key, &smsg, MSG_SIZE, 101, 0);
+            msgsnd(my_key, &msg, MSG_SIZE, 0);
+            msgrcv(my_key, &smsg, SMSG_SIZE, 101, 0);
             if (smsg.code == -1) {
                 printf("No such name exists.\n");
                 continue;
