@@ -125,7 +125,10 @@ int long_msg_sender(int my_key, MBUF msg, int my_id) {
         }
     }
     else if (msg.code == 3) {
-
+        int group_id = get_group_id(msg.shortMsgB);
+        if (group_id > 0) {
+            // send w/ for all users in group, make for all in v=group_id
+        }
     }
 
     return -1;
@@ -133,10 +136,10 @@ int long_msg_sender(int my_key, MBUF msg, int my_id) {
 
 int options_switch(int my_key, SMBUF msg, int my_id) {
     // list msgs need MBUF
+    int err = 0;
     if (msg.mtype < 5) {
         MBUF lmsg;
         lmsg.mtype = 100;
-        int err = 0;
         switch (msg.mtype) {
             case 2:
                 // list all users
@@ -156,44 +159,48 @@ int options_switch(int my_key, SMBUF msg, int my_id) {
         if (err == -1) lmsg.code = -1;
         else lmsg.code = 1;
         msgsnd(my_key, &lmsg, MSG_SIZE, IPC_NOWAIT);
+        return 0;
     }
-
+    err = 0;
     switch (msg.mtype) {
     case 5:
         // join group X
-        atJoin_group(1, my_id, msg.name);
+        err = atJoin_group(1, my_id, msg.name);
         break;
     case 6:
         // leave group X
-        atJoin_group(0, my_id, msg.name);
+        err = atJoin_group(0, my_id, msg.name);
         break;
 
     // mute NAME:
-    // if opt==2 then the user is muted (not default, default is 0 - not muted)
+    // if msg.opt==2 then the user is muted (not default, default is 0 - not muted)
     case 7:
         // mute user X
-        atMute_user(2, my_id, msg.name);
+        err = atMute_user(2, my_id, msg.name);
         break;
     case 8:
         // mute group X
-        atMute_group(2, my_id, msg.name);
+        err = atMute_group(2, my_id, msg.name);
         break;
     case 9:
         // unmute user X
-        atMute_user(0, my_id, msg.name);
+        err = atMute_user(0, my_id, msg.name);
         break;
     case 10:
         // unmute group X
-        atMute_group(0, my_id, msg.name);
+        err = atMute_group(0, my_id, msg.name);
         break;
     case 11:
         // logout
         logout_user(my_id);
-        break;
+        return 0;
     default:
         return -1;
     }
-
+    if (err == -1) msg.code = -1;
+    else msg.code = 1;
+    msg.mtype = 101;
+    msgsnd(my_key, &msg, SMSG_SIZE, IPC_NOWAIT);
     return 0;
 }
 
@@ -216,6 +223,7 @@ int log_user(LBUF client_msg, int usersLoaded, int *last_bad_pid, int *user_id) 
             bad_pids[(*last_bad_pid)++] = client_msg.pid;
             return -1; // bad pswd
         }
+        // TODO check if user's already logged in
         *user_id = i;
         return 1;  // Logged in
     }
