@@ -196,8 +196,8 @@ int main(int argc, char const *argv[])
     // login loop
     LBUF login_msg;
     LCBUF login_rcvd;
-    MBUF msg_to_server;
-    MBUF msg_from_server;
+    // MBUF msg_to_server;
+    // MBUF msg_from_server;
 
     while (1) {
         login_msg.mtype = 1;
@@ -236,7 +236,10 @@ int main(int argc, char const *argv[])
             break;
         case -3:    // Block pid
             printf("You've been blocked, sir. Stuck in a loop...\n");
-            while(1);    
+            while(1);
+        case -4:
+            printf("This user has already logged in. Try again.\n");
+            break;
         default:    // idk
             break;
         }

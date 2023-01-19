@@ -18,6 +18,8 @@ int user_blocks_user[MAX_USERS][MAX_USERS];
 int user_blocks_group[MAX_USERS][MAX_GROUPS];
 
 int server_id;
+int users_loaded;
+int groups_loaded;
 
 void signal_handler(int signo) {
     printf("...closing server...\n");
@@ -64,7 +66,7 @@ void list_active_users(char* list) {
 }
 
 int list_groups(char* list) {
-    for (int i = 0; i < MAX_GROUPS; i++) {
+    for (int i = 0; i < groups_loaded; i++) {
             strcat(list, group_names[i]);
             strcat(list, "\n");
     }
@@ -111,23 +113,32 @@ int logout_user(int my_id) {
 }
 
 int long_msg_sender(int my_key, MBUF msg, int my_id) {
+    SMBUF smsg;
+    smsg.mtype = 101;
     if (msg.code == 2) {
         int user_id = get_user_id(msg.shortMsg);
         int user_ipc = get_user_ipc(msg.shortMsg);
         if (user_ipc > 0) {
             if (user_blocks_user[user_id][my_id] == 2) {
                 // user blocked
-                // send msg back
+                // code = block
+                smsg.code = -5; // blocked
             } else {
                 // send msg to user
-                // send msg back
+                // code = ok
+                smsg.code = 1; // OK
             }
+        } else {
+            smsg.code = -1; // user not found
         }
     }
     else if (msg.code == 3) {
         int group_id = get_group_id(msg.shortMsgB);
         if (group_id > 0) {
+            // check if the sender is in group
             // send w/ for all users in group, make for all in v=group_id
+        } else {
+            smsg.code = -1; // group not found
         }
     }
 
@@ -204,8 +215,8 @@ int options_switch(int my_key, SMBUF msg, int my_id) {
     return 0;
 }
 
-int log_user(LBUF client_msg, int usersLoaded, int *last_bad_pid, int *user_id) {
-    for (int i = 0; i < usersLoaded; i++) {
+int log_user(LBUF client_msg, int *last_bad_pid, int *user_id) {
+    for (int i = 0; i < users_loaded; i++) {
         // check if nick is like user nick, if so then check the pswd
         if (strcmp(user_nicks[i], client_msg.nick) != 0) continue;     
         if (strcmp(user_pswds[i], client_msg.pswd) != 0) {
@@ -224,6 +235,7 @@ int log_user(LBUF client_msg, int usersLoaded, int *last_bad_pid, int *user_id) 
             return -1; // bad pswd
         }
         // TODO check if user's already logged in
+        if (user_pids[i] > 0) return -4; // user already logged in
         *user_id = i;
         return 1;  // Logged in
     }
@@ -280,7 +292,7 @@ int load_groups() {
         if (n <= 0) return iGroup;  // End of config file
 
         group_names[iGroup] = malloc(strlen(name)+1);
-        strcpy(user_nicks[iGroup], name);
+        strcpy(group_names[iGroup], name);
         iGroup += 1;
     }    
 }
@@ -289,10 +301,12 @@ int main(int argc, char const *argv[]) {
     signal(SIGINT, signal_handler);
     printf("server running...\n");
 
-    int usersLoaded = load_users(); 
-    printf("Users loaded (%d):\n", usersLoaded);
+    users_loaded = load_users(); 
+    printf("Users loaded (%d):\n", users_loaded);
+    groups_loaded = load_groups();
+    printf("Groups loaded (%d):\n", groups_loaded);
     int last_bad_pid = 0;   
-    for(int i = 0; i < usersLoaded; i++) {
+    for(int i = 0; i < users_loaded; i++) {
         printf("Login: %s\tPswd: %s\n", user_nicks[i], user_pswds[i]);
     }
 
@@ -320,10 +334,10 @@ int main(int argc, char const *argv[]) {
         if (test > 0) {
             printf("someone's logging in\n");
             int user_id = 0;
-            int feedback = log_user(login_rcvd, usersLoaded, &last_bad_pid, &user_id);
+            int feedback = log_user(login_rcvd, &last_bad_pid, &user_id);
             login_to_send.mtype = login_rcvd.pid;
             login_to_send.msgCode = feedback; // 1 - OK, -1 - BAD PSWD, -2 - BAD USER -3 - BLOCKED USER
-            printf("feedback = %d", feedback);
+            printf("feedback = %d\n", feedback);
             if (feedback == 1) {
                 int client_ipc_id = msgget(2000+login_rcvd.pid, 0666 | IPC_CREAT);
                 user_ipcs[user_id] = client_ipc_id;
@@ -336,7 +350,7 @@ int main(int argc, char const *argv[]) {
         // printf("feedback: %d\n", feedback);
         // printf("rcvd...\n");
 
-        for (int iUsers = 0; iUsers < usersLoaded; iUsers++) {
+        for (int iUsers = 0; iUsers < users_loaded; iUsers++) {
             if (user_pids[iUsers] == 0) continue;
             printf("now serving %d\n", user_pids[iUsers]);
             // serving all user IPC FIFOs
