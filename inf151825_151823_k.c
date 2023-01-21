@@ -41,7 +41,6 @@ int is_logged(int my_key) {
             printf("%s\n", msg.longMsg);
         }
 
-
         printf(
             "Enter what you want to do? [list, join, leave, mute, unmute, send, logout]\n");
         char request[SHORT_MSG_LEN];
@@ -211,7 +210,6 @@ int is_logged(int my_key) {
     return 0;
 }
 
-
 int main(int argc, char const *argv[])
 {
     signal(SIGINT, signal_handler);
@@ -219,15 +217,9 @@ int main(int argc, char const *argv[])
     int my_pid = getpid();
 
     int server_id = msgget(PROGRAM_KEY, 0666 | IPC_CREAT);
-    // read(file_id, &server_id, sizeof(server_id));
     printf("server id: %d\n", server_id);
-    // close(file_id);
-    // MSGBUF server_msg;
 
     // login loop
-    // MBUF msg_to_server;
-    // MBUF msg_from_server;
-
     while (1) {
         login_msg.mtype = 1;
         login_msg.pid = getpid();

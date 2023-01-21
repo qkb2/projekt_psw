@@ -267,7 +267,7 @@ int log_user(int *last_bad_pid, int *user_id) {
     return -2; // User not found
 }
 
-int load_users() {
+void load_users_and_groups() {
     int config_fd = open("config.txt", O_RDONLY);
     int iUser = 0;
     while (1) {
@@ -275,15 +275,20 @@ int load_users() {
         char nick_pswd_str[MSG_SIZE] = "";
         int n;
         while((n = read(config_fd, &buf, 1)) > 0) {
-            if (buf == ';') {
+            if (buf == ';' || buf == '#') {
                 lseek(config_fd, 1, SEEK_CUR);
                 break;
             }
             strncat(nick_pswd_str, &buf, 1);
-        }
-        if (n <= 0) return iUser;  // End of config file
+        } 
 
-        
+        if (buf == '#') {
+            printf("here \n");
+            users_loaded = iUser;
+            break;
+            // End of user config file
+        } 
+
         char *token = strtok(nick_pswd_str, "-");
         char *nick_pswd[2];
 
@@ -298,11 +303,8 @@ int load_users() {
         strcpy(user_pswds[iUser], nick_pswd[1]);
         iUser += 1;
     }
-    close(config_fd);
-}
 
-int load_groups() {
-    int config_fd = open("group_config.txt", O_RDONLY);
+    // load groups
     int iGroup = 0;
     while (1) {
         char buf;
@@ -315,22 +317,33 @@ int load_groups() {
             }
             strncat(name, &buf, 1);
         }
-        if (n <= 0) return iGroup;  // End of config file
+        if (n <= 0) {
+            groups_loaded = iGroup;
+            break;
+            // End of config file
+        }
 
         group_names[iGroup] = malloc(strlen(name)+1);
         strcpy(group_names[iGroup], name);
         iGroup += 1;
     }    
     close(config_fd);
+    return;
 }
+
+// int load_groups() {
+//     int config_fd = open("group_config.txt", O_RDONLY);
+//     close(config_fd);
+// }
 
 int main(int argc, char const *argv[]) {
     signal(SIGINT, signal_handler);
     printf("server running...\n");
 
-    users_loaded = load_users(); 
+    load_users_and_groups();
+    // users_loaded = load_users(); 
     printf("Users loaded (%d):\n", users_loaded);
-    groups_loaded = load_groups();
+    // groups_loaded = load_groups();
     printf("Groups loaded (%d):\n", groups_loaded);
     int last_bad_pid = 0;   
 
