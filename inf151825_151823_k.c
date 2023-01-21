@@ -42,7 +42,7 @@ int is_logged(int my_key) {
         }
 
         printf(
-            "Enter what you want to do? [list, join, leave, mute, unmute, send, logout]\n");
+            "Enter what you want to do? [list, join, leave, mute, unmute, send, logout, skip]\n");
         char request[SHORT_MSG_LEN];
 
         scanf("%s", request);
@@ -204,7 +204,7 @@ int is_logged(int my_key) {
             logout(my_key);
             return 0;
         }
-        else if (strcmp(request, "") == 0) continue;
+        else if (strcmp(request, "skip") == 0) continue;
         else printf("Command not found");
     }
     return 0;
