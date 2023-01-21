@@ -10,7 +10,7 @@ clean:
 	rm -f client server
 
 cleanup:
-	~/Documents/lab_psw/cleanup.sh
+	./cleanup.sh
 
 run: client server
 	./client
