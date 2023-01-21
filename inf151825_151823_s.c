@@ -111,7 +111,7 @@ int atMute_user(int opt, int my_id, char* user) {
 int atMute_group(int opt, int my_id, char* group) {
     int group_id = get_group_id(group);
     if (group_id == -1) return -1;
-    user_blocks_group[group_id][my_id] = opt;
+    user_blocks_group[my_id][group_id] = opt;
     return 0;
 }
 
@@ -298,6 +298,7 @@ int load_users() {
         strcpy(user_pswds[iUser], nick_pswd[1]);
         iUser += 1;
     }
+    close(config_fd);
 }
 
 int load_groups() {
@@ -320,6 +321,7 @@ int load_groups() {
         strcpy(group_names[iGroup], name);
         iGroup += 1;
     }    
+    close(config_fd);
 }
 
 int main(int argc, char const *argv[]) {
