@@ -9,6 +9,9 @@ server: inf151825_151823_s.c
 clean:
 	rm -f client server
 
+cleanup:
+	./cleanup.sh
+
 run: client server
 	./client
 	./server
