@@ -156,7 +156,10 @@ int long_msg_sender(int my_key, int my_id) {
             strncpy(long_msg.shortMsgB, long_msg.shortMsg, 16);
             strncpy(long_msg.shortMsg, user_nicks[my_id], 16);
             for (int i = 0; i < MAX_USERS; i++) {
-                if (group_user_matrix[group_id][i] == 1 && user_ipcs[i] > 0) {
+                if (
+                    group_user_matrix[group_id][i] == 1 
+                    && user_ipcs[i] > 0
+                    && user_blocks_group[my_id][group_id] != 2) {
                     msgsnd(user_ipcs[i], &long_msg, MSG_SIZE, 0);
                 }
             }
@@ -271,6 +274,7 @@ int log_user(int *last_bad_pid, int *user_id) {
 
 int load_users_and_groups() {
     int config_fd = open("config.txt", O_RDONLY);
+    if (config_fd == -1) return -1;
     int iUser = 0;
     while (1) {
         char buf;
@@ -342,7 +346,11 @@ int main(int argc, char const *argv[]) {
     signal(SIGINT, signal_handler);
     printf("server running...\n");
 
-    load_users_and_groups();
+    int lug = load_users_and_groups();
+    if (lug == -1) {
+        printf("No config.txt. Exiting server...\n");
+        return 2;
+    }
     // users_loaded = load_users(); 
     printf("Users loaded (%d):\n", users_loaded);
     // groups_loaded = load_groups();
