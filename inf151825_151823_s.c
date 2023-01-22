@@ -247,7 +247,7 @@ int log_user(int *last_bad_pid, int *user_id) {
         if (strcmp(user_pswds[i], login_rcvd.pswd) != 0) {
             // Wrong pswd
             // table for PIDs w/ bad pswd
-            for (int j = 0; j < *last_bad_pid; j++) {
+            for (int j = 0; j < (*last_bad_pid)+1; j++) {
                 if (bad_pids[j] == login_rcvd.pid) {
                     (bad_pid_strikes[j])++;
                     if (bad_pid_strikes[j] == CHANCES_TO_LOGIN-1) return -3; // user blocked

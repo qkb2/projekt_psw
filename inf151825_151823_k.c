@@ -176,12 +176,13 @@ int is_logged(int my_key) {
             printf("Type your msg here: ");
 
             // should work now
-            char *buffer;
-            size_t bufsize = LONG_MSG_LEN;
-            buffer = (char *) malloc(bufsize * sizeof(char));
-            getline(&buffer,&bufsize,stdin);
-            strcpy(msg.longMsg, buffer);
-            free(buffer);
+            // char *buffer;
+            // size_t bufsize = LONG_MSG_LEN;
+            // buffer = (char *) malloc(bufsize * sizeof(char));
+            // getline(&buffer,&bufsize,stdin);
+            // strcpy(msg.longMsg, buffer);
+            // free(buffer);
+            fgets(msg.longMsg, LONG_MSG_LEN-1, stdin);
             
             msgsnd(my_key, &msg, MSG_SIZE, 0);
             printf("msg sent \n");
@@ -205,7 +206,7 @@ int is_logged(int my_key) {
             return 0;
         }
         else if (strcmp(request, "skip") == 0) continue;
-        else printf("Command not found");
+        else printf("Command not found \n");
     }
     return 0;
 }
