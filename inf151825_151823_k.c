@@ -199,6 +199,10 @@ int is_logged(int my_key) {
                 printf("You've been blocked.\n");
                 continue;                
             }
+            if (smsg.code == -2) {
+                printf("You're not a member.\n");
+                continue;                
+            }
         }
         else if (strcmp(request, "logout") == 0) {
             printf("Logging out...\n");

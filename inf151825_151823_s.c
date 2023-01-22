@@ -148,7 +148,7 @@ int long_msg_sender(int my_key, int my_id) {
     }
     else if (long_msg.code == 3) {
         int group_id = get_group_id(long_msg.shortMsg);
-        if (group_id != -1) {
+        if (group_id != -1 && group_user_matrix[group_id][my_id] == 1) {
             // check if the sender is in group
             // send w/ for all users in group, make for all in v=group_id
             short_msg.code = 1;
@@ -160,8 +160,10 @@ int long_msg_sender(int my_key, int my_id) {
                     msgsnd(user_ipcs[i], &long_msg, MSG_SIZE, 0);
                 }
             }
-        } else {
+        } else if (group_id == -1) {
             short_msg.code = -1; // group not found
+        } else if (group_user_matrix[group_id][my_id] == 0) {
+            short_msg.code = -2; // not a member
         }
     }
     short_msg.mtype = 101;
@@ -267,7 +269,7 @@ int log_user(int *last_bad_pid, int *user_id) {
     return -2; // User not found
 }
 
-void load_users_and_groups() {
+int load_users_and_groups() {
     int config_fd = open("config.txt", O_RDONLY);
     int iUser = 0;
     while (1) {
@@ -328,7 +330,7 @@ void load_users_and_groups() {
         iGroup += 1;
     }    
     close(config_fd);
-    return;
+    return 1;
 }
 
 // int load_groups() {
